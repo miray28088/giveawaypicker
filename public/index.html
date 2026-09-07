@@ -1,0 +1,2019 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Giveaway Winner Picker & Comment CSV Exporter</title>
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.3/confetti.browser.min.js"></script>
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Outfit', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#fdf4ff',
+              400: '#e879f9',
+              500: '#d946ef',
+              600: '#c026d3',
+              700: '#a21caf',
+            },
+            accent: {
+              cyan: '#06b6d4',
+              violet: '#8b5cf6',
+              emerald: '#10b981',
+              amber: '#f59e0b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #090a12;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(217, 70, 239, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.15) 0px, transparent 50%),
+        radial-gradient(at 50% 100%, rgba(139, 92, 246, 0.12) 0px, transparent 50%);
+      background-attachment: fixed;
+    }
+
+    .font-display {
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .glass-panel {
+      background: rgba(18, 20, 36, 0.65);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .glass-card:hover {
+      border-color: rgba(217, 70, 239, 0.3);
+      box-shadow: 0 0 20px rgba(217, 70, 239, 0.15);
+    }
+
+    .glow-button {
+      box-shadow: 0 0 25px rgba(217, 70, 239, 0.35);
+    }
+    
+    .glow-button:hover {
+      box-shadow: 0 0 35px rgba(217, 70, 239, 0.55);
+    }
+
+    .spinner {
+      border-top-color: transparent;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .winner-anim {
+      animation: popIn 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards;
+    }
+
+    @keyframes popIn {
+      from {
+        opacity: 0;
+        transform: scale(0.88) translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(217, 70, 239, 0.4);
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.9; }
+    }
+    .slot-glow {
+      animation: pulseGlow 1.5s infinite;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen text-slate-100 flex flex-col justify-between selection:bg-brand-500 selection:text-white">
+
+  <!-- Main Container -->
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 py-8 w-full">
+
+    <!-- Top Navigation App Pages Bar -->
+    <div class="flex flex-wrap justify-between items-center gap-4 mb-8 border-b border-white/10 pb-4">
+      <div class="flex items-center gap-2 font-display font-extrabold text-xl text-white">
+        <span class="text-2xl">🎉</span> Social Tools Pro
+      </div>
+
+      <!-- Main Navigation Tabs & IG Login Button -->
+      <div class="flex flex-wrap items-center gap-3">
+        <nav class="flex gap-1.5 p-1 rounded-2xl bg-black/40 border border-white/10">
+          <button id="navWinnerBtn" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 bg-brand-600 text-white shadow-lg">
+            <span>🎲</span> Winner Picker
+          </button>
+          <button id="navCsvBtn" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-white/5">
+            <span>📊</span> Export All Comments CSV
+          </button>
+          <button id="navLoginBtn" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-white/5">
+            <span>🔐</span> Instagram Login
+          </button>
+        </nav>
+
+        <!-- Instagram Account Login Status Button -->
+        <div id="igAuthContainer">
+          <button id="openIgModalBtn" class="px-3.5 py-2 rounded-xl bg-pink-600/20 hover:bg-pink-600/30 text-pink-300 border border-pink-500/40 text-xs font-semibold transition flex items-center gap-1.5">
+            <span>🔐</span> Log in to Instagram
+          </button>
+          <div id="igLoggedInBadge" class="hidden px-3.5 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold flex items-center gap-2">
+            <span>✅</span> <span id="igUserLabel">@user</span>
+            <button id="igLogoutBtn" class="text-slate-400 hover:text-slate-200 text-[10px] ml-1 underline">Logout</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- INSTAGRAM LOGIN MODAL DIALOG                                        -->
+    <!-- =================================================================== -->
+    <div id="igLoginModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+      <div class="glass-panel rounded-3xl p-6 sm:p-8 max-w-md w-full border-brand-500/40 shadow-2xl relative">
+        <button id="closeIgModalBtn" class="absolute right-4 top-4 text-slate-400 hover:text-white text-lg font-bold">✕</button>
+        
+        <div class="w-12 h-12 rounded-2xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-2xl mb-3">
+          🔐
+        </div>
+        <h3 class="text-xl font-bold font-display text-white mb-1">Log in to Instagram</h3>
+        <p class="text-xs text-slate-400 mb-4">
+          Unlocks 2,400+ comments scraping by bypassing Instagram's 10-comment wall.
+        </p>
+
+        <!-- Method Switcher Tabs -->
+        <div class="flex p-1 bg-black/40 border border-white/10 rounded-xl mb-4 text-xs font-semibold">
+          <button id="modalTabCreds" type="button" class="flex-1 py-2 rounded-lg bg-brand-600 text-white transition">
+            🔑 Account Login
+          </button>
+          <button id="modalTabCookie" type="button" class="flex-1 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition">
+            🍪 Paste Session Cookie
+          </button>
+        </div>
+
+        <!-- Form 1: Username & Password -->
+        <form id="igLoginForm" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Instagram Username / Email</label>
+            <input id="igUsernameInput" type="text" placeholder="e.g. my_instagram_handle" required
+              class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brand-500" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Instagram Password</label>
+            <input id="igPasswordInput" type="password" placeholder="••••••••••••" required
+              class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brand-500" />
+          </div>
+
+          <button id="submitIgLoginBtn" type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-brand-600 to-accent-violet hover:from-brand-500 hover:to-accent-violet text-white font-bold text-sm transition flex items-center justify-center gap-2">
+            <span id="igLoginBtnText">🔑 Log In & Save Session</span>
+            <span id="igLoginSpinner" class="hidden w-4 h-4 border-2 border-white rounded-full spinner"></span>
+          </button>
+        </form>
+
+        <!-- Form 2: Direct Session Cookie -->
+        <form id="igCookieForm" class="hidden space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Instagram Username (Optional)</label>
+            <input id="igCookieUser" type="text" placeholder="e.g. my_handle"
+              class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brand-500" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">sessionid Cookie Value</label>
+            <input id="igCookieInput" type="password" placeholder="Paste sessionid cookie string..." required
+              class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brand-500" />
+            <p class="text-[10px] text-slate-500 mt-1">Copy from F12 -> Application -> Cookies -> sessionid</p>
+          </div>
+
+          <button id="submitIgCookieBtn" type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-accent-cyan to-teal-600 hover:from-accent-cyan hover:to-teal-500 text-white font-bold text-sm transition flex items-center justify-center gap-2">
+            <span id="igCookieBtnText">🍪 Save Session Cookie</span>
+            <span id="igCookieSpinner" class="hidden w-4 h-4 border-2 border-white rounded-full spinner"></span>
+          </button>
+        </form>
+
+        <div id="igLoginMsg" class="hidden mt-4 p-3 rounded-xl text-xs text-center font-medium"></div>
+      </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- PAGE 1: GIVEAWAY WINNER PICKER                                       -->
+    <!-- =================================================================== -->
+    <div id="pageWinnerPicker" class="space-y-8">
+      
+      <!-- Header Section -->
+      <header class="text-center relative">
+        <div class="absolute right-0 top-0">
+          <button id="soundToggleBtn" title="Toggle Sound Effects" class="p-2.5 rounded-xl glass-card text-slate-300 hover:text-white transition flex items-center gap-2 text-xs font-medium">
+            <span id="soundIcon">🔊</span>
+            <span class="hidden sm:inline">Sound On</span>
+          </button>
+        </div>
+
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-xs font-medium mb-3">
+          <span class="w-2 h-2 rounded-full bg-brand-400 animate-ping"></span>
+          Fisher–Yates Algorithm &bull; 100% Unbiased Server-Side Draw
+        </div>
+
+        <h1 class="text-4xl sm:text-5xl font-extrabold font-display tracking-tight bg-gradient-to-r from-brand-400 via-accent-violet to-accent-cyan bg-clip-text text-transparent">
+          Giveaway Winner Picker
+        </h1>
+        <p class="text-slate-400 mt-3 text-sm sm:text-base max-w-2xl mx-auto">
+          Fetch comments from public Instagram, TikTok, or YouTube posts — or paste them directly — and run a fair, verified random draw.
+        </p>
+      </header>
+
+      <!-- Mode Selector Tabs -->
+      <div class="flex justify-center">
+        <div class="p-1 bg-black/40 border border-white/10 rounded-2xl flex gap-1 shadow-inner">
+          <button id="modeUrlBtn" class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 bg-brand-600 text-white shadow-lg">
+            <span>🔗</span> Fetch from Post URL
+          </button>
+          <button id="modePasteBtn" class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-white/5">
+            <span>📝</span> Paste Comments Manually
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Card Panel -->
+      <div class="glass-panel rounded-3xl p-6 sm:p-8 relative overflow-hidden">
+        
+        <!-- Decorative background accent glow -->
+        <div class="absolute -top-24 -left-24 w-60 h-60 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -right-24 w-60 h-60 bg-accent-cyan/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <!-- Mode 1: URL Input View -->
+        <div id="urlMode" class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-2">
+              <div class="flex justify-between items-center mb-1">
+                <label for="postUrl" class="block text-sm font-semibold text-slate-200">
+                  Public Post Link <span class="text-brand-400">*</span>
+                </label>
+                <div class="flex items-center gap-2 text-xs text-slate-400">
+                  <span>📸 IG</span> • <span>🎵 TikTok</span> • <span>▶️ YT</span>
+                </div>
+              </div>
+              <input id="postUrl" type="url" 
+                placeholder="https://www.instagram.com/p/..., tiktok.com/@user/video/..., or youtube.com/watch?v=..."
+                class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 transition" />
+            </div>
+
+            <div>
+              <label for="scrapeDepth" class="block text-sm font-semibold text-slate-200 mb-1">
+                Scraping Depth Limit
+              </label>
+              <select id="scrapeDepth" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-3 text-xs sm:text-sm text-slate-200 font-semibold focus:outline-none focus:border-brand-500">
+                <option value="full" selected>🔥 Full Post (Up to 2,500+ Comments)</option>
+                <option value="deep">🚀 Deep (~1,000 Comments)</option>
+                <option value="standard">⚡ Fast (~250 Comments)</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="winnerIgBanner" class="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex flex-wrap gap-3 items-center justify-between transition">
+            <div class="flex gap-2 items-center">
+              <span id="winnerIgIcon" class="text-base">💡</span>
+              <span id="winnerIgText">Instagram restricts non-logged-in sessions to ~10 comments.</span>
+            </div>
+            <div class="flex gap-2 items-center">
+              <button id="winnerIgActionBtn" type="button" class="px-3 py-1.5 rounded-lg bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 border border-pink-500/40 text-xs font-semibold transition shrink-0">
+                Log in to Instagram 🔐
+              </button>
+              <button type="button" onclick="setMode('paste')" class="px-3 py-1.5 rounded-lg bg-brand-500/20 hover:bg-brand-500/30 text-brand-300 border border-brand-500/40 text-xs font-semibold transition shrink-0">
+                Switch to Paste Mode 📝
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mode 2: Paste Input View -->
+        <div id="pasteMode" class="hidden space-y-4">
+          <div class="flex justify-between items-center">
+            <label for="rawText" class="block text-sm font-semibold text-slate-200">
+              Paste Raw Comments / Entrants <span class="text-brand-400">*</span>
+            </label>
+            <button id="loadSampleBtn" type="button" class="text-xs text-brand-400 hover:text-brand-300 font-medium underline flex items-center gap-1">
+              ✨ Load Sample Giveaway Comments
+            </button>
+          </div>
+
+          <textarea id="rawText" rows="7" 
+            placeholder="Paste comments here (one per line). Supported formats:&#10;@john_doe: Pick me! I love this giveaway! @friend1 @friend2 #giveaway&#10;alice_smith - Great contest! @buddy&#10;bob_88 Awesome prizes&#10;or simply a list of usernames"
+            class="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-sm font-mono text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 custom-scrollbar transition"></textarea>
+
+          <!-- Live Paste Stats Indicator -->
+          <div id="pasteLiveStats" class="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl bg-black/30 border border-white/5 text-xs text-slate-400">
+            <div class="flex gap-4">
+              <span>Total Lines: <strong id="liveLinesCount" class="text-slate-200">0</strong></span>
+              <span>Total Entrants: <strong id="liveUserCount" class="text-slate-200">0</strong></span>
+              <span>Duplicates: <strong id="liveDupesCount" class="text-brand-400">0</strong></span>
+            </div>
+            <span class="text-slate-500 italic text-[11px]">Auto-formatting usernames and text</span>
+          </div>
+        </div>
+
+        <!-- Common Draw Settings Panel -->
+        <div class="mt-8 pt-6 border-t border-white/10">
+          <h3 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+            <span>⚙️</span> Draw Rules & Filtering Options
+          </h3>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+            <!-- Winners Count -->
+            <div class="glass-card rounded-xl p-3.5">
+              <label class="block text-xs font-semibold text-slate-300 mb-1.5">Winners Count</label>
+              <div class="flex items-center gap-2">
+                <input id="winnerCount" type="number" min="1" max="500" value="15" 
+                  class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm font-bold text-brand-400 focus:outline-none focus:border-brand-500" />
+              </div>
+              <div class="flex gap-1 mt-2">
+                <button type="button" onclick="setWinnerCount(1)" class="px-2 py-0.5 text-[10px] rounded bg-white/5 hover:bg-white/10 text-slate-400">1</button>
+                <button type="button" onclick="setWinnerCount(3)" class="px-2 py-0.5 text-[10px] rounded bg-white/5 hover:bg-white/10 text-slate-400">3</button>
+                <button type="button" onclick="setWinnerCount(5)" class="px-2 py-0.5 text-[10px] rounded bg-white/5 hover:bg-white/10 text-slate-400">5</button>
+                <button type="button" onclick="setWinnerCount(10)" class="px-2 py-0.5 text-[10px] rounded bg-white/5 hover:bg-white/10 text-slate-400">10</button>
+                <button type="button" onclick="setWinnerCount(15)" class="px-2 py-0.5 text-[10px] rounded bg-white/5 hover:bg-white/10 text-slate-400">15</button>
+              </div>
+            </div>
+
+            <!-- Backup Count -->
+            <div class="glass-card rounded-xl p-3.5">
+              <label class="block text-xs font-semibold text-slate-300 mb-1.5">Backup Winners</label>
+              <input id="backupCount" type="number" min="0" max="100" value="3" 
+                class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm font-bold text-accent-cyan focus:outline-none focus:border-accent-cyan" />
+              <div class="flex gap-1 mt-2">
+                <button type="button" onclick="setBackupCount(0)" class="px-2 py-0.5 text-[10px] rounded bg-white/5 hover:bg-white/10 text-slate-400">0</button>
+                <button type="button" onclick="setBackupCount(1)" class="px-2 py-0.5 text-[10px] rounded bg-white/5 hover:bg-white/10 text-slate-400">1</button>
+                <button type="button" onclick="setBackupCount(3)" class="px-2 py-0.5 text-[10px] rounded bg-white/5 hover:bg-white/10 text-slate-400">3</button>
+                <button type="button" onclick="setBackupCount(5)" class="px-2 py-0.5 text-[10px] rounded bg-white/5 hover:bg-white/10 text-slate-400">5</button>
+              </div>
+            </div>
+
+            <!-- Min @ Mentions -->
+            <div class="glass-card rounded-xl p-3.5">
+              <label class="block text-xs font-semibold text-slate-300 mb-1.5">Min @ Mentions</label>
+              <input id="minMentions" type="number" min="0" max="10" value="0" 
+                class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm font-semibold text-slate-200 focus:outline-none focus:border-brand-500" />
+              <p class="text-[10px] text-slate-500 mt-2">Requires @tag in comment</p>
+            </div>
+
+            <!-- Required Hashtag / Word -->
+            <div class="glass-card rounded-xl p-3.5">
+              <label class="block text-xs font-semibold text-slate-300 mb-1.5">Required Hashtag/Word</label>
+              <input id="requiredTag" type="text" placeholder="e.g. #giveaway" 
+                class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500" />
+              <p class="text-[10px] text-slate-500 mt-2">Case-insensitive filter</p>
+            </div>
+          </div>
+
+          <!-- Secondary options row -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Exclude Usernames -->
+            <div class="glass-card rounded-xl p-3.5">
+              <label for="excludeUsers" class="block text-xs font-semibold text-slate-300 mb-1">
+                Exclude Usernames (Host / Admins / Bots)
+              </label>
+              <input id="excludeUsers" type="text" placeholder="e.g. @hostaccount, @admin, bot123" 
+                class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500" />
+            </div>
+
+            <!-- Deduplicate Checkbox -->
+            <div class="glass-card rounded-xl p-3.5 flex items-center justify-between">
+              <div>
+                <label for="uniqueOnly" class="text-xs font-semibold text-slate-200 block cursor-pointer">
+                  1 Entry Per User (Deduplicate)
+                </label>
+                <p class="text-[10px] text-slate-400">Ignores multiple comments from same user</p>
+              </div>
+              <input id="uniqueOnly" type="checkbox" checked 
+                class="w-5 h-5 rounded border-white/20 bg-black/40 accent-brand-500 cursor-pointer" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Button -->
+        <div class="mt-8">
+          <button id="runBtn" class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-brand-600 via-brand-500 to-accent-violet hover:from-brand-500 hover:to-accent-violet transition-all text-white font-extrabold text-base font-display flex items-center justify-center gap-3 glow-button">
+            <span id="runBtnIcon">🚀</span>
+            <span id="runBtnText">Fetch Post & Launch Draw</span>
+            <span id="spinner" class="hidden w-5 h-5 border-2 border-white rounded-full spinner"></span>
+          </button>
+        </div>
+
+        <!-- Status / Error Messages Container -->
+        <div id="statusBox" class="hidden mt-4 p-4 rounded-xl text-xs sm:text-sm text-center font-medium"></div>
+
+      </div>
+
+      <!-- Live Shuffle / Slot Machine Banner Modal -->
+      <div id="shuffleOverlay" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass-panel rounded-3xl p-8 max-w-md w-full text-center border-brand-500/40 shadow-2xl relative">
+          <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-3xl animate-bounce">
+            🎰
+          </div>
+          <h3 class="text-2xl font-bold font-display text-white mb-1">Selecting Winners...</h3>
+          <p class="text-xs text-slate-400 mb-6">Running Fisher–Yates unbiased shuffle algorithm</p>
+          
+          <div class="p-6 rounded-2xl bg-black/60 border border-brand-500/30 mb-4 slot-glow">
+            <div id="shuffleName" class="text-xl font-bold font-mono text-brand-400 truncate">
+              @calculating...
+            </div>
+          </div>
+
+          <div class="flex justify-center gap-1 text-slate-500 text-xs">
+            <span>Randomizing seeds</span> • <span>Evaluating constraints</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results Section -->
+      <div id="results" class="hidden space-y-6">
+
+        <!-- Active Post Preview Banner -->
+        <div id="postBanner" class="glass-panel rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 border-brand-500/20">
+          <div class="flex items-center gap-3">
+            <span id="postPlatformBadge" class="px-2.5 py-1 rounded-lg bg-brand-500/20 text-brand-300 text-xs font-bold uppercase tracking-wider">
+              POST
+            </span>
+            <div class="overflow-hidden">
+              <p id="postTitleText" class="text-sm font-bold text-white truncate max-w-lg">Target Post</p>
+              <p id="postSubtitleText" class="text-xs text-slate-400 truncate">Loaded 0 comments for giveaway draw</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="px-3 py-1 rounded-lg bg-black/40 border border-white/10 text-slate-300">
+              Total Comments: <strong id="bannerTotalComments" class="text-brand-400">0</strong>
+            </span>
+          </div>
+        </div>
+
+        <!-- Stats Summary Dashboard -->
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-3">
+          <div class="glass-panel rounded-2xl p-3.5 text-center">
+            <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total Scraped</p>
+            <p id="statTotalFetched" class="text-2xl font-extrabold font-display text-white mt-1">0</p>
+            <p class="text-[10px] text-slate-500 mt-0.5">Comments</p>
+          </div>
+          <div class="glass-panel rounded-2xl p-3.5 text-center">
+            <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Unique Users</p>
+            <p id="statUniqueUsers" class="text-2xl font-extrabold font-display text-accent-violet mt-1">0</p>
+            <p class="text-[10px] text-slate-500 mt-0.5">Entrants</p>
+          </div>
+          <div class="glass-panel rounded-2xl p-3.5 text-center">
+            <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Eligible Pool</p>
+            <p id="statEligible" class="text-2xl font-extrabold font-display text-accent-emerald mt-1">0</p>
+            <p class="text-[10px] text-slate-500 mt-0.5">Qualified</p>
+          </div>
+          <div class="glass-panel rounded-2xl p-3.5 text-center">
+            <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Winners Drawn</p>
+            <p id="statWinnersDrawn" class="text-2xl font-extrabold font-display text-brand-400 mt-1">0</p>
+            <p class="text-[10px] text-slate-500 mt-0.5">Primary</p>
+          </div>
+          <div class="glass-panel rounded-2xl p-3.5 text-center">
+            <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Backups Ready</p>
+            <p id="statBackupsDrawn" class="text-2xl font-extrabold font-display text-accent-cyan mt-1">0</p>
+            <p class="text-[10px] text-slate-500 mt-0.5">Reserve</p>
+          </div>
+        </div>
+
+        <!-- Action Toolbar -->
+        <div class="glass-panel rounded-2xl p-4 flex flex-wrap justify-between items-center gap-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold text-slate-300">Export:</span>
+            <button id="downloadTxt" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 text-xs font-medium transition flex items-center gap-1.5 border border-white/10">
+              <span>📄</span> .txt
+            </button>
+            <button id="downloadCsv" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 text-xs font-medium transition flex items-center gap-1.5 border border-white/10">
+              <span>📊</span> .csv
+            </button>
+            <button id="copyWinnersBtn" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 text-xs font-medium transition flex items-center gap-1.5 border border-white/10">
+              <span>📋</span> Copy Winners
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button id="toggleAllCommentsBtn" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold transition flex items-center gap-1.5 border border-white/10">
+              <span>🔍</span> Inspect All Comments (<span id="allCommentsBtnCount">0</span>)
+            </button>
+            <button id="redrawBtn" class="px-4 py-1.5 rounded-lg bg-brand-500/20 hover:bg-brand-500/30 text-brand-300 border border-brand-500/40 text-xs font-semibold transition flex items-center gap-1.5">
+              <span>🔄</span> Re-draw Winners
+            </button>
+            <button id="toggleAuditBtn" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-slate-200 text-xs font-medium transition">
+              <span>🛡️</span> Audit
+            </button>
+          </div>
+        </div>
+
+        <!-- Collapsible Panel 1: All Scraped Comments Drawer -->
+        <div id="allCommentsPanel" class="hidden glass-panel rounded-3xl p-6 border-white/10 space-y-4">
+          <div class="flex justify-between items-center">
+            <h3 class="text-lg font-bold font-display text-white flex items-center gap-2">
+              <span>💬</span> All Scraped Comments & Entrants (<span id="drawerTotalCount">0</span>)
+            </h3>
+            <input id="commentsSearch" type="text" placeholder="Search username or text..." 
+              class="bg-black/40 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500 w-48 sm:w-64" />
+          </div>
+
+          <div id="commentsTable" class="space-y-2 custom-scrollbar max-h-96 overflow-y-auto pr-1"></div>
+        </div>
+
+        <!-- Collapsible Panel 2: Audit Panel -->
+        <div id="auditPanel" class="hidden glass-panel rounded-2xl p-4 text-xs font-mono space-y-1 text-slate-400 border-emerald-500/20">
+          <div class="text-accent-emerald font-bold mb-2 flex items-center gap-1">
+            <span>✓</span> Fisher–Yates Verification Proof
+          </div>
+          <p>Timestamp: <span id="auditTime" class="text-slate-200"></span></p>
+          <p>Random Seed Hash: <span id="auditSeed" class="text-slate-200"></span></p>
+          <p>Shuffle Algorithm: <span class="text-slate-200">Fisher–Yates (Knuth) Permutation</span></p>
+          <p>Fairness Guarantee: <span class="text-accent-emerald">Uniform Distribution (1/N probability per item)</span></p>
+        </div>
+
+        <!-- Winners Lists Columns -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+          <!-- Primary Winners Column -->
+          <div class="glass-panel rounded-3xl p-6 border-brand-500/30">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-xl font-bold font-display text-brand-400 flex items-center gap-2">
+                <span>🏆</span> Primary Winners
+              </h2>
+              <span id="winnersCountBadge" class="px-2.5 py-0.5 rounded-full bg-brand-500/20 text-brand-300 text-xs font-semibold">0 Drawn</span>
+            </div>
+
+            <div id="winnersList" class="space-y-3 custom-scrollbar max-h-[600px] overflow-y-auto pr-1"></div>
+          </div>
+
+          <!-- Backup Winners Column -->
+          <div class="glass-panel rounded-3xl p-6 border-accent-cyan/30">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-xl font-bold font-display text-accent-cyan flex items-center gap-2">
+                <span>🥈</span> Backup Winners
+              </h2>
+              <span id="backupsCountBadge" class="px-2.5 py-0.5 rounded-full bg-accent-cyan/20 text-accent-cyan text-xs font-semibold">0 Ready</span>
+            </div>
+
+            <div id="backupsList" class="space-y-3 custom-scrollbar max-h-[600px] overflow-y-auto pr-1"></div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- PAGE 2: FETCH & EXPORT ALL COMMENTS CSV                              -->
+    <!-- =================================================================== -->
+    <div id="pageCsvExporter" class="hidden space-y-8">
+
+      <!-- Header Section -->
+      <header class="text-center">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-cyan/10 border border-accent-cyan/20 text-accent-cyan text-xs font-medium mb-3">
+          <span>📊</span> Direct Export Tool &bull; Instagram, TikTok, YouTube
+        </div>
+
+        <h1 class="text-4xl sm:text-5xl font-extrabold font-display tracking-tight bg-gradient-to-r from-accent-cyan via-accent-violet to-brand-400 bg-clip-text text-transparent">
+          Export All Comments to CSV
+        </h1>
+        <p class="text-slate-400 mt-3 text-sm sm:text-base max-w-2xl mx-auto">
+          Extract all public comments from any post and download the full dataset as a clean, structured <strong>.CSV</strong> or <strong>.TXT</strong> spreadsheet.
+        </p>
+      </header>
+
+      <!-- CSV Mode Selector Tabs (URL Scraping vs Manual Paste) -->
+      <div class="flex justify-center">
+        <div class="p-1 bg-black/40 border border-white/10 rounded-2xl flex gap-1 shadow-inner">
+          <button id="csvModeUrlBtn" class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 bg-accent-cyan text-black shadow-lg font-bold">
+            <span>🔗</span> Fetch from Post URL
+          </button>
+          <button id="csvModePasteBtn" class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-white/5">
+            <span>📝</span> Paste Comments Manually (2,400+ Ready)
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Exporter Form Card -->
+      <div class="glass-panel rounded-3xl p-6 sm:p-8 space-y-6">
+        
+        <!-- CSV Mode 1: URL Fetch Input -->
+        <div id="csvUrlMode" class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-2">
+              <label for="csvPostUrl" class="block text-sm font-semibold text-slate-200 mb-1">
+                Public Post Link <span class="text-accent-cyan">*</span>
+              </label>
+              <input id="csvPostUrl" type="url" 
+                placeholder="https://www.instagram.com/p/..., tiktok.com/@user/video/..., or youtube.com/watch?v=..."
+                class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-accent-cyan focus:ring-2 focus:ring-accent-cyan/30 transition" />
+            </div>
+
+            <div>
+              <label for="csvScrapeDepth" class="block text-sm font-semibold text-slate-200 mb-1">
+                Scraping Depth Limit
+              </label>
+              <select id="csvScrapeDepth" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-3.5 text-xs sm:text-sm text-slate-200 font-semibold focus:outline-none focus:border-accent-cyan">
+                <option value="full" selected>🔥 Full Post (Up to 2,500+ Comments)</option>
+                <option value="deep">🚀 Deep (~1,000 Comments)</option>
+                <option value="standard">⚡ Fast (~250 Comments)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Session ID Cookie Input -->
+          <details class="group bg-black/30 border border-white/10 rounded-xl p-3.5 text-xs text-slate-300">
+            <summary class="font-semibold text-accent-cyan cursor-pointer flex items-center justify-between">
+              <span>🔑 Optional: Provide Instagram Session Cookie (sessionid)</span>
+              <span class="group-open:rotate-180 transition-transform">▼</span>
+            </summary>
+            <div class="mt-3 space-y-2 text-slate-400">
+              <p>Providing an Instagram <code class="text-amber-300">sessionid</code> cookie allows Playwright to browse as a logged-in user and extract all 2,400+ comments without hitting the 10-comment wall!</p>
+              <input id="csvSessionId" type="password" placeholder="Paste your Instagram sessionid cookie string here..." 
+                class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 placeholder-slate-600 focus:outline-none focus:border-accent-cyan" />
+            </div>
+          </details>
+
+          <div id="csvIgBanner" class="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex flex-wrap gap-3 items-center justify-between transition">
+            <div class="flex gap-2 items-center">
+              <span id="csvIgIcon" class="text-base">💡</span>
+              <span id="csvIgText">Instagram restricts non-logged-in sessions to ~10 comments.</span>
+            </div>
+            <div class="flex gap-2 items-center">
+              <button id="csvIgActionBtn" type="button" class="px-3 py-1.5 rounded-lg bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 border border-pink-500/40 text-xs font-semibold transition shrink-0">
+                Log in to Instagram 🔐
+              </button>
+              <button type="button" onclick="setCsvMode('paste')" class="px-3 py-1.5 rounded-lg bg-accent-cyan/20 hover:bg-accent-cyan/30 text-accent-cyan border border-accent-cyan/40 text-xs font-semibold transition shrink-0">
+                Switch to Paste CSV Mode 📝
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CSV Mode 2: Manual Paste Input -->
+        <div id="csvPasteMode" class="hidden space-y-4">
+          <div class="flex justify-between items-center">
+            <label for="csvRawText" class="block text-sm font-semibold text-slate-200">
+              Paste Raw Comments (One per line) <span class="text-accent-cyan">*</span>
+            </label>
+            <button id="loadCsvSampleBtn" type="button" class="text-xs text-accent-cyan hover:text-cyan-300 font-medium underline flex items-center gap-1">
+              ✨ Load Sample Comments
+            </button>
+          </div>
+
+          <textarea id="csvRawText" rows="8" 
+            placeholder="Paste all comments here (one per line). Supported formats:&#10;@john_doe: Pick me! I love this giveaway! @friend1 @friend2 #giveaway&#10;alice_smith - Great contest! @buddy&#10;bob_88 Awesome prizes&#10;or simply a list of usernames"
+            class="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-sm font-mono text-slate-200 placeholder-slate-500 focus:outline-none focus:border-accent-cyan focus:ring-2 focus:ring-accent-cyan/30 custom-scrollbar transition"></textarea>
+        </div>
+
+        <button id="runCsvExportBtn" class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-accent-cyan via-accent-violet to-brand-500 hover:from-accent-cyan hover:to-brand-500 transition-all text-white font-extrabold text-base font-display flex items-center justify-center gap-3 shadow-lg shadow-accent-cyan/20">
+          <span id="csvBtnIcon">📊</span>
+          <span id="csvBtnText">Scrape & Export All Comments to CSV</span>
+          <span id="csvSpinner" class="hidden w-5 h-5 border-2 border-white rounded-full spinner"></span>
+        </button>
+
+        <div id="csvStatusBox" class="hidden p-4 rounded-xl text-xs sm:text-sm text-center font-medium"></div>
+      </div>
+
+      <!-- CSV Results & Download Section -->
+      <div id="csvResults" class="hidden space-y-6">
+
+        <!-- Banner & Toolbar -->
+        <div class="glass-panel rounded-3xl p-6 flex flex-wrap justify-between items-center gap-4">
+          <div>
+            <span class="px-2.5 py-1 rounded-lg bg-accent-emerald/20 text-accent-emerald text-xs font-bold uppercase tracking-wider">
+              ✓ SUCCESSFUL EXPORT
+            </span>
+            <h2 class="text-2xl font-extrabold font-display text-white mt-2">
+              <span id="csvTotalCount">0</span> Comments Ready to Download
+            </h2>
+            <p id="csvPostSubtitle" class="text-xs text-slate-400 mt-1">Extracted full post comments dataset</p>
+          </div>
+
+          <div class="flex flex-wrap gap-2">
+            <button id="downloadFullCsvBtn" class="px-5 py-3 rounded-xl bg-gradient-to-r from-accent-emerald to-teal-600 hover:from-accent-emerald hover:to-teal-500 text-white text-sm font-bold transition flex items-center gap-2 shadow-lg shadow-emerald-900/40">
+              <span>📊</span> Download Full .CSV File
+            </button>
+            <button id="downloadFullTxtBtn" class="px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 text-sm font-semibold transition flex items-center gap-2 border border-white/10">
+              <span>📄</span> Download .TXT
+            </button>
+            <button id="copyAllCsvUsernamesBtn" class="px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 text-sm font-semibold transition flex items-center gap-2 border border-white/10">
+              <span>📋</span> Copy All Handles
+            </button>
+          </div>
+        </div>
+
+        <!-- Full Scraped Dataset Table -->
+        <div class="glass-panel rounded-3xl p-6 space-y-4">
+          <div class="flex flex-wrap justify-between items-center gap-3">
+            <h3 class="text-lg font-bold font-display text-white flex items-center gap-2">
+              <span>📑</span> Full Scraped Dataset Preview
+            </h3>
+            <input id="csvSearchInput" type="text" placeholder="Filter username or comment text..." 
+              class="bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-accent-cyan w-64" />
+          </div>
+
+          <div id="csvDatasetTable" class="space-y-2 custom-scrollbar max-h-[500px] overflow-y-auto pr-1"></div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- PAGE 3: INSTAGRAM LOGIN & SESSION MANAGER                           -->
+    <!-- =================================================================== -->
+    <div id="pageIgLogin" class="hidden space-y-8">
+
+      <!-- Header Section -->
+      <header class="text-center">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-pink-500/10 border border-pink-500/20 text-pink-400 text-xs font-medium mb-3">
+          <span>🔐</span> Session Authenticator &bull; Instagram 2,400+ Comments Unlocker
+        </div>
+
+        <h1 class="text-4xl sm:text-5xl font-extrabold font-display tracking-tight bg-gradient-to-r from-pink-500 via-brand-400 to-accent-violet bg-clip-text text-transparent">
+          Instagram Login & Session
+        </h1>
+        <p class="text-slate-400 mt-3 text-sm sm:text-base max-w-2xl mx-auto">
+          Log into Instagram to allow Playwright to scrape large posts without hitting Instagram's 10-comment unauthenticated wall.
+        </p>
+      </header>
+
+      <!-- Active Session Status Card -->
+      <div class="glass-panel rounded-3xl p-6 sm:p-8 border-brand-500/30">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div id="igPageStatusIcon" class="w-14 h-14 rounded-2xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-3xl">
+              🔐
+            </div>
+            <div>
+              <h2 class="text-xl font-bold font-display text-white" id="igPageStatusTitle">Instagram Session: Not Logged In</h2>
+              <p class="text-xs text-slate-400 mt-0.5" id="igPageStatusSubtitle">Log in below or paste your session cookie to fetch all comments</p>
+            </div>
+          </div>
+
+          <div id="igPageActionBtns" class="flex gap-2">
+            <button id="igPageLogoutBtn" class="hidden px-4 py-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 text-xs font-semibold transition">
+              Log Out Session 🚪
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Login Options Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Card 1: Automated Login with Account Credentials -->
+        <div class="glass-panel rounded-3xl p-6 sm:p-8 space-y-4 border-white/10">
+          <div class="flex items-center gap-3">
+            <span class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-xl">🔑</span>
+            <div>
+              <h3 class="text-base font-bold text-white">Method 1: Account Login</h3>
+              <p class="text-[11px] text-slate-400">Automated login using Playwright Chromium</p>
+            </div>
+          </div>
+
+          <form id="igPageLoginForm" class="space-y-3 pt-2">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Instagram Username / Email</label>
+              <input id="igPageUsernameInput" type="text" placeholder="e.g. my_instagram_handle" required
+                class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brand-500" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Instagram Password</label>
+              <input id="igPagePasswordInput" type="password" placeholder="••••••••••••" required
+                class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brand-500" />
+            </div>
+
+            <button id="submitIgPageLoginBtn" type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-brand-600 to-accent-violet hover:from-brand-500 hover:to-accent-violet text-white font-bold text-sm transition flex items-center justify-center gap-2">
+              <span id="igPageLoginBtnText">🔑 Log In & Save Session</span>
+              <span id="igPageLoginSpinner" class="hidden w-4 h-4 border-2 border-white rounded-full spinner"></span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Card 2: Direct Session Cookie Paste -->
+        <div class="glass-panel rounded-3xl p-6 sm:p-8 space-y-4 border-white/10">
+          <div class="flex items-center gap-3">
+            <span class="w-10 h-10 rounded-xl bg-accent-cyan/20 border border-accent-cyan/40 flex items-center justify-center text-xl">🍪</span>
+            <div>
+              <h3 class="text-base font-bold text-white">Method 2: Session Cookie (`sessionid`)</h3>
+              <p class="text-[11px] text-slate-400">Instant & 100% immune to 2FA / Security Prompts</p>
+            </div>
+          </div>
+
+          <form id="igPageCookieForm" class="space-y-3 pt-2">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Your Instagram Username</label>
+              <input id="igPageCookieUser" type="text" placeholder="e.g. my_instagram_handle"
+                class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-accent-cyan" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">`sessionid` Cookie Value</label>
+              <input id="igPageCookieInput" type="password" placeholder="Paste sessionid string here..." required
+                class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-accent-cyan" />
+            </div>
+
+            <button id="submitIgPageCookieBtn" type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-accent-cyan to-teal-600 hover:from-accent-cyan hover:to-teal-500 text-white font-bold text-sm transition flex items-center justify-center gap-2">
+              <span id="igPageCookieBtnText">🍪 Save Session Cookie</span>
+              <span id="igPageCookieSpinner" class="hidden w-4 h-4 border-2 border-white rounded-full spinner"></span>
+            </button>
+          </form>
+        </div>
+
+      </div>
+
+      <div id="igPageMsg" class="hidden p-4 rounded-xl text-xs sm:text-sm text-center font-medium"></div>
+
+      <!-- Quick Guide Card -->
+      <div class="glass-panel rounded-3xl p-6 sm:p-8 border-white/10 space-y-4">
+        <h3 class="text-base font-bold font-display text-white flex items-center gap-2">
+          <span>💡</span> How to get your Instagram Session Cookie in 15 seconds:
+        </h3>
+        <ol class="list-decimal list-inside text-xs text-slate-300 space-y-2 leading-relaxed">
+          <li>Open <strong class="text-brand-400">Instagram.com</strong> in Google Chrome or Edge and log into your account.</li>
+          <li>Press <code class="bg-black/60 px-1.5 py-0.5 rounded text-amber-300">F12</code> (or right-click anywhere and click <em>Inspect</em>) to open Developer Tools.</li>
+          <li>Click the <strong class="text-accent-cyan">Application</strong> tab at the top (or <em>Storage</em> in Firefox).</li>
+          <li>In the left sidebar, expand <strong class="text-white">Cookies</strong> and select <code class="text-amber-300">https://www.instagram.com</code>.</li>
+          <li>Find the row named <code class="text-pink-400 font-bold">sessionid</code>, double-click its <em>Value</em>, copy it, and paste it into Method 2 above!</li>
+        </ol>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-12 text-center text-xs text-slate-500 space-y-2 py-6 border-t border-white/5">
+      <p>
+        Giveaway Winner Picker &bull; Powered by server-side Fisher–Yates shuffle algorithm.
+      </p>
+      <p class="text-[11px] text-slate-600">
+        Public DOM scraping is best-effort. Use manual paste mode for guaranteed 100% extraction accuracy.
+      </p>
+    </footer>
+
+  </div>
+
+  <!-- JavaScript Logic -->
+  <script>
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+      }
+      playTick() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(440 + Math.random() * 200, this.ctx.currentTime);
+          gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.05);
+        } catch (_) {}
+      }
+      playFanfare() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const notes = [523.25, 659.25, 783.99, 1046.50];
+          notes.forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            const startTime = this.ctx.currentTime + idx * 0.09;
+            gain.gain.setValueAtTime(0.08, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.25);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(startTime);
+            osc.stop(startTime + 0.25);
+          });
+        } catch (_) {}
+      }
+    }
+
+    const soundEngine = new SoundEngine();
+    let currentMode = 'url';
+    let currentCsvMode = 'url';
+    let lastData = null;
+    let lastExportData = null;
+
+    // Instagram Login & Session Logic
+    const openIgModalBtn = document.getElementById('openIgModalBtn');
+    const closeIgModalBtn = document.getElementById('closeIgModalBtn');
+    const igLoginModal = document.getElementById('igLoginModal');
+    const igLoginForm = document.getElementById('igLoginForm');
+    const igCookieForm = document.getElementById('igCookieForm');
+    const modalTabCreds = document.getElementById('modalTabCreds');
+    const modalTabCookie = document.getElementById('modalTabCookie');
+    const igLoginMsg = document.getElementById('igLoginMsg');
+    const igLoggedInBadge = document.getElementById('igLoggedInBadge');
+    const igUserLabel = document.getElementById('igUserLabel');
+    const igLogoutBtn = document.getElementById('igLogoutBtn');
+    const submitIgLoginBtn = document.getElementById('submitIgLoginBtn');
+    const submitIgCookieBtn = document.getElementById('submitIgCookieBtn');
+
+    // Page 3 Elements
+    const pageIgLogin = document.getElementById('pageIgLogin');
+    const navLoginBtn = document.getElementById('navLoginBtn');
+    const igPageStatusTitle = document.getElementById('igPageStatusTitle');
+    const igPageStatusSubtitle = document.getElementById('igPageStatusSubtitle');
+    const igPageLogoutBtn = document.getElementById('igPageLogoutBtn');
+    const igPageLoginForm = document.getElementById('igPageLoginForm');
+    const igPageCookieForm = document.getElementById('igPageCookieForm');
+    const igPageMsg = document.getElementById('igPageMsg');
+
+    // In-page Banners
+    const winnerIgBanner = document.getElementById('winnerIgBanner');
+    const winnerIgIcon = document.getElementById('winnerIgIcon');
+    const winnerIgText = document.getElementById('winnerIgText');
+    const winnerIgActionBtn = document.getElementById('winnerIgActionBtn');
+
+    const csvIgBanner = document.getElementById('csvIgBanner');
+    const csvIgIcon = document.getElementById('csvIgIcon');
+    const csvIgText = document.getElementById('csvIgText');
+    const csvIgActionBtn = document.getElementById('csvIgActionBtn');
+
+    function openLoginModal() {
+      igLoginModal.classList.remove('hidden');
+      igLoginMsg.classList.add('hidden');
+    }
+
+    if (openIgModalBtn) openIgModalBtn.addEventListener('click', openLoginModal);
+    if (closeIgModalBtn) closeIgModalBtn.addEventListener('click', () => igLoginModal.classList.add('hidden'));
+
+    if (winnerIgActionBtn) winnerIgActionBtn.addEventListener('click', openLoginModal);
+    if (csvIgActionBtn) csvIgActionBtn.addEventListener('click', openLoginModal);
+
+    // Modal Method Switcher
+    if (modalTabCreds && modalTabCookie) {
+      modalTabCreds.addEventListener('click', () => {
+        igLoginForm.classList.remove('hidden');
+        igCookieForm.classList.add('hidden');
+        modalTabCreds.className = 'flex-1 py-2 rounded-lg bg-brand-600 text-white transition';
+        modalTabCookie.className = 'flex-1 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition';
+      });
+      modalTabCookie.addEventListener('click', () => {
+        igCookieForm.classList.remove('hidden');
+        igLoginForm.classList.add('hidden');
+        modalTabCookie.className = 'flex-1 py-2 rounded-lg bg-brand-600 text-white transition';
+        modalTabCreds.className = 'flex-1 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition';
+      });
+    }
+
+    async function checkIgStatus() {
+      try {
+        const res = await fetch('/api/instagram-status');
+        const data = await res.json();
+        if (data.loggedIn && data.username) {
+          openIgModalBtn.classList.add('hidden');
+          igLoggedInBadge.classList.remove('hidden');
+          igUserLabel.textContent = '@' + data.username;
+
+          // Update Page 3 Status
+          if (igPageStatusTitle) igPageStatusTitle.textContent = `Instagram Session: Active (@${data.username})`;
+          if (igPageStatusSubtitle) igPageStatusSubtitle.textContent = 'Session saved! Playwright will browse as a logged-in user to fetch all comments.';
+          if (igPageLogoutBtn) igPageLogoutBtn.classList.remove('hidden');
+
+          // Update Winner Picker Banner
+          if (winnerIgBanner) {
+            winnerIgBanner.className = 'p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex flex-wrap gap-3 items-center justify-between transition';
+            winnerIgIcon.textContent = '✅';
+            winnerIgText.innerHTML = `<strong>Logged in as @${data.username}</strong> — Unlimited 2,400+ Instagram comment scraping unlocked!`;
+            winnerIgActionBtn.textContent = 'Manage Session 🔐';
+          }
+
+          // Update CSV Exporter Banner
+          if (csvIgBanner) {
+            csvIgBanner.className = 'p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex flex-wrap gap-3 items-center justify-between transition';
+            csvIgIcon.textContent = '✅';
+            csvIgText.innerHTML = `<strong>Logged in as @${data.username}</strong> — Unlimited 2,400+ Instagram comment scraping unlocked!`;
+            csvIgActionBtn.textContent = 'Manage Session 🔐';
+          }
+
+        } else {
+          openIgModalBtn.classList.remove('hidden');
+          igLoggedInBadge.classList.add('hidden');
+
+          // Update Page 3 Status
+          if (igPageStatusTitle) igPageStatusTitle.textContent = 'Instagram Session: Not Logged In';
+          if (igPageStatusSubtitle) igPageStatusSubtitle.textContent = 'Log in below or paste your session cookie to fetch all 2,400+ comments';
+          if (igPageLogoutBtn) igPageLogoutBtn.classList.add('hidden');
+
+          // Update Banners
+          if (winnerIgBanner) {
+            winnerIgBanner.className = 'p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex flex-wrap gap-3 items-center justify-between transition';
+            winnerIgIcon.textContent = '💡';
+            winnerIgText.innerHTML = 'Instagram restricts non-logged-in sessions to ~10 comments.';
+            winnerIgActionBtn.textContent = 'Log in to Instagram 🔐';
+          }
+
+          if (csvIgBanner) {
+            csvIgBanner.className = 'p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex flex-wrap gap-3 items-center justify-between transition';
+            csvIgIcon.textContent = '💡';
+            csvIgText.innerHTML = 'Instagram restricts non-logged-in sessions to ~10 comments.';
+            csvIgActionBtn.textContent = 'Log in to Instagram 🔐';
+          }
+        }
+      } catch (_) {}
+    }
+    checkIgStatus();
+
+    // Handle Login via Playwright (Modal Form)
+    igLoginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('igUsernameInput').value.trim();
+      const password = document.getElementById('igPasswordInput').value;
+
+      submitIgLoginBtn.disabled = true;
+      document.getElementById('igLoginSpinner').classList.remove('hidden');
+      document.getElementById('igLoginBtnText').textContent = 'Logging in via Playwright…';
+      igLoginMsg.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/instagram-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+          igLoginMsg.textContent = data.error || 'Login failed.';
+          igLoginMsg.className = 'mt-4 p-3 rounded-xl text-xs text-center font-medium bg-red-500/10 border border-red-500/30 text-red-300';
+          igLoginMsg.classList.remove('hidden');
+          return;
+        }
+
+        igLoginMsg.textContent = data.message || 'Successfully logged in!';
+        igLoginMsg.className = 'mt-4 p-3 rounded-xl text-xs text-center font-medium bg-emerald-500/10 border border-emerald-500/30 text-emerald-300';
+        igLoginMsg.classList.remove('hidden');
+
+        setTimeout(() => {
+          igLoginModal.classList.add('hidden');
+          checkIgStatus();
+        }, 1500);
+
+      } catch (err) {
+        igLoginMsg.textContent = 'Login Error: ' + err.message;
+        igLoginMsg.className = 'mt-4 p-3 rounded-xl text-xs text-center font-medium bg-red-500/10 border border-red-500/30 text-red-300';
+        igLoginMsg.classList.remove('hidden');
+      } finally {
+        submitIgLoginBtn.disabled = false;
+        document.getElementById('igLoginSpinner').classList.add('hidden');
+        document.getElementById('igLoginBtnText').textContent = '🔑 Log In & Save Session';
+      }
+    });
+
+    // Handle Login via Session Cookie (Modal Form)
+    if (igCookieForm) {
+      igCookieForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('igCookieUser').value.trim();
+        const sessionId = document.getElementById('igCookieInput').value.trim();
+
+        submitIgCookieBtn.disabled = true;
+        document.getElementById('igCookieSpinner').classList.remove('hidden');
+        document.getElementById('igCookieBtnText').textContent = 'Saving Cookie…';
+        igLoginMsg.classList.add('hidden');
+
+        try {
+          const res = await fetch('/api/instagram-set-cookie', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, sessionId }),
+          });
+          const data = await res.json();
+
+          if (!data.success) {
+            igLoginMsg.textContent = data.error || 'Failed to save cookie.';
+            igLoginMsg.className = 'mt-4 p-3 rounded-xl text-xs text-center font-medium bg-red-500/10 border border-red-500/30 text-red-300';
+            igLoginMsg.classList.remove('hidden');
+            return;
+          }
+
+          igLoginMsg.textContent = data.message || 'Session cookie saved!';
+          igLoginMsg.className = 'mt-4 p-3 rounded-xl text-xs text-center font-medium bg-emerald-500/10 border border-emerald-500/30 text-emerald-300';
+          igLoginMsg.classList.remove('hidden');
+
+          setTimeout(() => {
+            igLoginModal.classList.add('hidden');
+            checkIgStatus();
+          }, 1500);
+
+        } catch (err) {
+          igLoginMsg.textContent = 'Cookie Save Error: ' + err.message;
+          igLoginMsg.className = 'mt-4 p-3 rounded-xl text-xs text-center font-medium bg-red-500/10 border border-red-500/30 text-red-300';
+          igLoginMsg.classList.remove('hidden');
+        } finally {
+          submitIgCookieBtn.disabled = false;
+          document.getElementById('igCookieSpinner').classList.add('hidden');
+          document.getElementById('igCookieBtnText').textContent = '🍪 Save Session Cookie';
+        }
+      });
+    }
+
+    // Handle Page 3 Credential Login Form
+    if (igPageLoginForm) {
+      igPageLoginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('igPageUsernameInput').value.trim();
+        const password = document.getElementById('igPagePasswordInput').value;
+
+        const btn = document.getElementById('submitIgPageLoginBtn');
+        const spinner = document.getElementById('igPageLoginSpinner');
+        const text = document.getElementById('igPageLoginBtnText');
+
+        btn.disabled = true;
+        spinner.classList.remove('hidden');
+        text.textContent = 'Logging in via Playwright…';
+        igPageMsg.classList.add('hidden');
+
+        try {
+          const res = await fetch('/api/instagram-login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password }),
+          });
+          const data = await res.json();
+
+          if (!data.success) {
+            igPageMsg.textContent = data.error || 'Login failed.';
+            igPageMsg.className = 'p-4 rounded-xl text-xs sm:text-sm text-center font-medium bg-red-500/10 border border-red-500/30 text-red-300';
+            igPageMsg.classList.remove('hidden');
+            return;
+          }
+
+          igPageMsg.textContent = data.message || 'Successfully logged in!';
+          igPageMsg.className = 'p-4 rounded-xl text-xs sm:text-sm text-center font-medium bg-emerald-500/10 border border-emerald-500/30 text-emerald-300';
+          igPageMsg.classList.remove('hidden');
+          checkIgStatus();
+
+        } catch (err) {
+          igPageMsg.textContent = 'Login Error: ' + err.message;
+          igPageMsg.className = 'p-4 rounded-xl text-xs sm:text-sm text-center font-medium bg-red-500/10 border border-red-500/30 text-red-300';
+          igPageMsg.classList.remove('hidden');
+        } finally {
+          btn.disabled = false;
+          spinner.classList.add('hidden');
+          text.textContent = '🔑 Log In & Save Session';
+        }
+      });
+    }
+
+    // Handle Page 3 Cookie Form
+    if (igPageCookieForm) {
+      igPageCookieForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('igPageCookieUser').value.trim();
+        const sessionId = document.getElementById('igPageCookieInput').value.trim();
+
+        const btn = document.getElementById('submitIgPageCookieBtn');
+        const spinner = document.getElementById('igPageCookieSpinner');
+        const text = document.getElementById('igPageCookieBtnText');
+
+        btn.disabled = true;
+        spinner.classList.remove('hidden');
+        text.textContent = 'Saving Cookie…';
+        igPageMsg.classList.add('hidden');
+
+        try {
+          const res = await fetch('/api/instagram-set-cookie', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, sessionId }),
+          });
+          const data = await res.json();
+
+          if (!data.success) {
+            igPageMsg.textContent = data.error || 'Failed to save cookie.';
+            igPageMsg.className = 'p-4 rounded-xl text-xs sm:text-sm text-center font-medium bg-red-500/10 border border-red-500/30 text-red-300';
+            igPageMsg.classList.remove('hidden');
+            return;
+          }
+
+          igPageMsg.textContent = data.message || 'Session cookie saved!';
+          igPageMsg.className = 'p-4 rounded-xl text-xs sm:text-sm text-center font-medium bg-emerald-500/10 border border-emerald-500/30 text-emerald-300';
+          igPageMsg.classList.remove('hidden');
+          checkIgStatus();
+
+        } catch (err) {
+          igPageMsg.textContent = 'Cookie Save Error: ' + err.message;
+          igPageMsg.className = 'p-4 rounded-xl text-xs sm:text-sm text-center font-medium bg-red-500/10 border border-red-500/30 text-red-300';
+          igPageMsg.classList.remove('hidden');
+        } finally {
+          btn.disabled = false;
+          spinner.classList.add('hidden');
+          text.textContent = '🍪 Save Session Cookie';
+        }
+      });
+    }
+
+    const logoutHandler = async () => {
+      await fetch('/api/instagram-logout', { method: 'POST' });
+      checkIgStatus();
+    };
+
+    if (igLogoutBtn) igLogoutBtn.addEventListener('click', logoutHandler);
+    if (igPageLogoutBtn) igPageLogoutBtn.addEventListener('click', logoutHandler);
+
+    // Navigation Tabs Handler (Winner, CSV, Login)
+    const navWinnerBtn = document.getElementById('navWinnerBtn');
+    const navCsvBtn = document.getElementById('navCsvBtn');
+    const pageWinnerPicker = document.getElementById('pageWinnerPicker');
+    const pageCsvExporter = document.getElementById('pageCsvExporter');
+
+    function setActiveTab(tab) {
+      pageWinnerPicker.classList.add('hidden');
+      pageCsvExporter.classList.add('hidden');
+      if (pageIgLogin) pageIgLogin.classList.add('hidden');
+
+      navWinnerBtn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-white/5';
+      navCsvBtn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-white/5';
+      if (navLoginBtn) navLoginBtn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-white/5';
+
+      if (tab === 'winner') {
+        pageWinnerPicker.classList.remove('hidden');
+        navWinnerBtn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 bg-brand-600 text-white shadow-lg';
+      } else if (tab === 'csv') {
+        pageCsvExporter.classList.remove('hidden');
+        navCsvBtn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 bg-brand-600 text-white shadow-lg';
+      } else if (tab === 'login') {
+        if (pageIgLogin) pageIgLogin.classList.remove('hidden');
+        if (navLoginBtn) navLoginBtn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 bg-brand-600 text-white shadow-lg';
+      }
+    }
+
+    if (navWinnerBtn) navWinnerBtn.addEventListener('click', () => setActiveTab('winner'));
+    if (navCsvBtn) navCsvBtn.addEventListener('click', () => setActiveTab('csv'));
+    if (navLoginBtn) navLoginBtn.addEventListener('click', () => setActiveTab('login'));
+
+    // CSV Mode Toggle (URL vs Paste)
+    const csvModeUrlBtn = document.getElementById('csvModeUrlBtn');
+    const csvModePasteBtn = document.getElementById('csvModePasteBtn');
+    const csvUrlMode = document.getElementById('csvUrlMode');
+    const csvPasteMode = document.getElementById('csvPasteMode');
+
+    function setCsvMode(mode) {
+      currentCsvMode = mode;
+      csvStatusBox.classList.add('hidden');
+      if (mode === 'url') {
+        csvUrlMode.classList.remove('hidden');
+        csvPasteMode.classList.add('hidden');
+        csvModeUrlBtn.className = 'px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 bg-accent-cyan text-black shadow-lg font-bold';
+        csvModePasteBtn.className = 'px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-white/5';
+      } else {
+        csvUrlMode.classList.add('hidden');
+        csvPasteMode.classList.remove('hidden');
+        csvModePasteBtn.className = 'px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 bg-accent-cyan text-black shadow-lg font-bold';
+        csvModeUrlBtn.className = 'px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-white/5';
+      }
+    }
+
+    csvModeUrlBtn.addEventListener('click', () => setCsvMode('url'));
+    csvModePasteBtn.addEventListener('click', () => setCsvMode('paste'));
+
+    document.getElementById('loadCsvSampleBtn').addEventListener('click', () => {
+      const sample = [
+        "@sarah_m: OMG pick me please! I need this! @emma @john #giveaway",
+        "@alex_tech: Count me in! Loving this channel @dev_guy #giveaway",
+        "@design_pro - Awesome opportunity! @creative_sam #giveaway",
+        "@crypto_king: Pick me for the win! #giveaway @trader_joe @trader_bob",
+        "@gamer_lisa: Hope I win this awesome prize! @gamer1 @gamer2 #giveaway",
+        "@travel_bug - Fingers crossed! @globetrotter #giveaway",
+        "@fitness_guru: Entering the draw! @gym_bro #giveaway",
+        "@foodie_dave: Looks incredible! @chef_maria @food_lover #giveaway"
+      ].join('\n');
+      document.getElementById('csvRawText').value = sample;
+    });
+
+    // Winner Picker DOM Elements
+    const modeUrlBtn = document.getElementById('modeUrlBtn');
+    const modePasteBtn = document.getElementById('modePasteBtn');
+    const urlMode = document.getElementById('urlMode');
+    const pasteMode = document.getElementById('pasteMode');
+    const runBtn = document.getElementById('runBtn');
+    const runBtnText = document.getElementById('runBtnText');
+    const runBtnIcon = document.getElementById('runBtnIcon');
+    const spinner = document.getElementById('spinner');
+    const statusBox = document.getElementById('statusBox');
+    const resultsEl = document.getElementById('results');
+    const winnersList = document.getElementById('winnersList');
+    const backupsList = document.getElementById('backupsList');
+    const rawText = document.getElementById('rawText');
+    const shuffleOverlay = document.getElementById('shuffleOverlay');
+    const shuffleName = document.getElementById('shuffleName');
+    const soundToggleBtn = document.getElementById('soundToggleBtn');
+    const soundIcon = document.getElementById('soundIcon');
+    const auditPanel = document.getElementById('auditPanel');
+    const allCommentsPanel = document.getElementById('allCommentsPanel');
+    const commentsTable = document.getElementById('commentsTable');
+    const commentsSearch = document.getElementById('commentsSearch');
+
+    function setWinnerCount(val) {
+      document.getElementById('winnerCount').value = val;
+    }
+    function setBackupCount(val) {
+      document.getElementById('backupCount').value = val;
+    }
+
+    soundToggleBtn.addEventListener('click', () => {
+      soundEngine.enabled = !soundEngine.enabled;
+      soundIcon.textContent = soundEngine.enabled ? '🔊' : '🔇';
+      soundToggleBtn.querySelector('span:last-child').textContent = soundEngine.enabled ? 'Sound On' : 'Sound Off';
+    });
+
+    function setMode(mode) {
+      currentMode = mode;
+      statusBox.classList.add('hidden');
+      if (mode === 'url') {
+        urlMode.classList.remove('hidden');
+        pasteMode.classList.add('hidden');
+        modeUrlBtn.className = 'px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 bg-brand-600 text-white shadow-lg';
+        modePasteBtn.className = 'px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-white/5';
+        runBtnText.textContent = 'Fetch Post & Launch Draw';
+        runBtnIcon.textContent = '🚀';
+      } else {
+        urlMode.classList.add('hidden');
+        pasteMode.classList.remove('hidden');
+        modePasteBtn.className = 'px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 bg-brand-600 text-white shadow-lg';
+        modeUrlBtn.className = 'px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-white/5';
+        runBtnText.textContent = 'Launch Draw on Pasted Comments';
+        runBtnIcon.textContent = '🎲';
+        updateLivePasteStats();
+      }
+    }
+
+    modeUrlBtn.addEventListener('click', () => setMode('url'));
+    modePasteBtn.addEventListener('click', () => setMode('paste'));
+
+    rawText.addEventListener('input', updateLivePasteStats);
+
+    function updateLivePasteStats() {
+      const text = rawText.value || '';
+      const lines = text.split('\n').filter(l => l.trim().length > 0);
+      document.getElementById('liveLinesCount').textContent = lines.length;
+
+      const seen = new Set();
+      let dupeCount = 0;
+      let validUsers = 0;
+
+      lines.forEach(line => {
+        const colonMatch = line.match(/^([@\w.\-]+)\s*[:\-]\s*(.*)$/);
+        const spaceMatch = line.match(/^@([a-zA-Z0-9_.]+)\s+(.*)$/);
+        let user = '';
+        if (colonMatch) user = colonMatch[1].replace(/^@/, '');
+        else if (spaceMatch) user = spaceMatch[1];
+        else user = line.trim().replace(/^@/, '');
+
+        if (user) {
+          validUsers++;
+          const key = user.toLowerCase();
+          if (seen.has(key)) dupeCount++;
+          else seen.add(key);
+        }
+      });
+
+      document.getElementById('liveUserCount').textContent = validUsers;
+      document.getElementById('liveDupesCount').textContent = dupeCount;
+    }
+
+    document.getElementById('loadSampleBtn').addEventListener('click', () => {
+      const sample = [
+        "@sarah_m: OMG pick me please! I need this! @emma @john #giveaway",
+        "@alex_tech: Count me in! Loving this channel @dev_guy #giveaway",
+        "@design_pro - Awesome opportunity! @creative_sam #giveaway",
+        "@crypto_king: Pick me for the win! #giveaway @trader_joe @trader_bob",
+        "@gamer_lisa: Hope I win this awesome prize! @gamer1 @gamer2 #giveaway",
+        "@travel_bug - Fingers crossed! @globetrotter #giveaway",
+        "@fitness_guru: Entering the draw! @gym_bro #giveaway",
+        "@foodie_dave: Looks incredible! @chef_maria @food_lover #giveaway",
+        "@photo_fanatic: Great contest! @lens_master #giveaway",
+        "@music_maestro: Pick me! @beat_maker #giveaway",
+        "@code_ninja: Let's go! @web_dev #giveaway",
+        "@style_icon: Super excited! @fashion_diva #giveaway",
+        "@movie_buff: Movie night prize! @cinema_fan #giveaway",
+        "@book_worm: Pick me please! @reader #giveaway",
+        "@tech_explorer: Awesome stuff @geek_friend #giveaway",
+        "@sarah_m: Extra entry comment! #giveaway @emma",
+        "@alex_tech: Second comment! #giveaway",
+        "@nature_lover: Beautiful! @tree_hugger #giveaway",
+        "@coffee_addict: Morning entry @barista #giveaway",
+        "@pet_parent: For my dog! @vet_tech #giveaway"
+      ].join('\n');
+
+      rawText.value = sample;
+      updateLivePasteStats();
+    });
+
+    function getCommonPayload() {
+      const depthEl = document.getElementById('scrapeDepth');
+      return {
+        winnerCount: parseInt(document.getElementById('winnerCount').value, 10) || 15,
+        backupCount: parseInt(document.getElementById('backupCount').value, 10) || 3,
+        minMentions: parseInt(document.getElementById('minMentions').value, 10) || 0,
+        requiredTag: document.getElementById('requiredTag').value.trim(),
+        uniqueOnly: document.getElementById('uniqueOnly').checked,
+        excludeUsers: document.getElementById('excludeUsers').value.trim(),
+        scrapeDepth: depthEl ? depthEl.value : 'full',
+      };
+    }
+
+    function createAvatarHtml(username, bgGradientIndex = 0) {
+      const u = (username || '?').replace(/^@/, '');
+      const initial = u.charAt(0).toUpperCase();
+      const gradients = [
+        'from-fuchsia-500 to-purple-600',
+        'from-cyan-500 to-blue-600',
+        'from-emerald-500 to-teal-600',
+        'from-violet-500 to-indigo-600',
+        'from-amber-500 to-rose-600'
+      ];
+      const grad = gradients[bgGradientIndex % gradients.length];
+      return `<div class="w-9 h-9 rounded-xl bg-gradient-to-br ${grad} flex items-center justify-center font-bold text-white text-sm shadow-md shrink-0">${initial}</div>`;
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str || '';
+      return div.innerHTML;
+    }
+
+    function fireConfetti() {
+      const duration = 2000;
+      const end = Date.now() + duration;
+      (function frame() {
+        confetti({ particleCount: 5, angle: 60, spread: 65, origin: { x: 0 }, colors: ['#d946ef','#06b6d4','#8b5cf6'] });
+        confetti({ particleCount: 5, angle: 120, spread: 65, origin: { x: 1 }, colors: ['#d946ef','#06b6d4','#8b5cf6'] });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      })();
+    }
+
+    // Render Results Dashboard
+    function renderResults(data) {
+      lastData = data;
+
+      const totalFetched = data.totalFetched || 0;
+      document.getElementById('statTotalFetched').textContent = totalFetched;
+      document.getElementById('statUniqueUsers').textContent = data.uniqueUsersCount || data.eligibleCount || 0;
+      document.getElementById('statEligible').textContent = data.eligibleCount || 0;
+      document.getElementById('statWinnersDrawn').textContent = (data.winners || []).length;
+      document.getElementById('statBackupsDrawn').textContent = (data.backups || []).length;
+
+      document.getElementById('bannerTotalComments').textContent = `${totalFetched} Comments`;
+      document.getElementById('allCommentsBtnCount').textContent = totalFetched;
+      document.getElementById('drawerTotalCount').textContent = totalFetched;
+
+      const postPlatformBadge = document.getElementById('postPlatformBadge');
+      const postTitleText = document.getElementById('postTitleText');
+      const postSubtitleText = document.getElementById('postSubtitleText');
+
+      if (data.platform === 'manual') {
+        postPlatformBadge.textContent = '📝 PASTED';
+        postPlatformBadge.className = 'px-2.5 py-1 rounded-lg bg-brand-500/20 text-brand-300 text-xs font-bold uppercase tracking-wider';
+        postTitleText.textContent = 'Manually Pasted Comments List';
+        postSubtitleText.textContent = `Scraped/Pasted ${totalFetched} total comment entries`;
+      } else {
+        const plat = (data.platform || 'URL').toUpperCase();
+        postPlatformBadge.textContent = plat === 'INSTAGRAM' ? '📸 INSTAGRAM' : plat === 'TIKTOK' ? '🎵 TIKTOK' : '▶️ YOUTUBE';
+        postPlatformBadge.className = 'px-2.5 py-1 rounded-lg bg-accent-cyan/20 text-accent-cyan text-xs font-bold uppercase tracking-wider';
+        postTitleText.textContent = data.postUrl || 'Social Media Post';
+        postSubtitleText.textContent = `Extracted ${totalFetched} total comments from post`;
+      }
+
+      document.getElementById('winnersCountBadge').textContent = `${(data.winners || []).length} Drawn`;
+      document.getElementById('backupsCountBadge').textContent = `${(data.backups || []).length} Ready`;
+
+      if (data.audit) {
+        document.getElementById('auditTime').textContent = new Date(data.audit.timestamp).toLocaleString();
+        document.getElementById('auditSeed').textContent = data.audit.seed;
+      }
+
+      winnersList.innerHTML = '';
+      if (!data.winners || data.winners.length === 0) {
+        winnersList.innerHTML = `<div class="text-slate-500 text-sm text-center py-6">No eligible winners found matching your filters.</div>`;
+      } else {
+        data.winners.forEach((w, i) => {
+          const username = typeof w === 'string' ? w : w.username;
+          const text = typeof w === 'object' && w.text ? w.text : '';
+          const commentNum = typeof w === 'object' && w.commentNumber ? w.commentNumber : null;
+
+          const card = document.createElement('div');
+          card.className = 'winner-anim glass-card rounded-2xl p-3.5 flex items-center justify-between gap-3 border-brand-500/20 hover:border-brand-500/50 transition';
+          card.style.animationDelay = (i * 0.04) + 's';
+
+          card.innerHTML = `
+            <div class="flex items-center gap-3 overflow-hidden">
+              <span class="font-extrabold font-display text-brand-400 text-sm w-7 text-center shrink-0">
+                ${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
+              </span>
+              ${createAvatarHtml(username, i)}
+              <div class="overflow-hidden">
+                <div class="font-bold text-slate-100 text-sm flex items-center gap-2">
+                  <span class="truncate">@${escapeHtml(username)}</span>
+                  ${commentNum ? `<span class="px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 text-[10px] font-mono shrink-0">Comment #${commentNum} of ${totalFetched}</span>` : ''}
+                  <button title="Copy Username" onclick="copyText('@${escapeHtml(username)}')" class="text-slate-500 hover:text-brand-400 text-xs transition">📋</button>
+                </div>
+                ${text ? `<p class="text-xs text-slate-400 truncate mt-0.5 max-w-md">"${escapeHtml(text)}"</p>` : ''}
+              </div>
+            </div>
+            <button onclick="disqualifyWinner(${i}, 'winner')" title="Disqualify & Replace" class="shrink-0 px-2.5 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[11px] font-medium border border-red-500/20 transition">
+              Disqualify 🚫
+            </button>
+          `;
+          winnersList.appendChild(card);
+        });
+      }
+
+      backupsList.innerHTML = '';
+      if (!data.backups || data.backups.length === 0) {
+        backupsList.innerHTML = `<div class="text-slate-500 text-sm text-center py-6">No backup winners set.</div>`;
+      } else {
+        data.backups.forEach((b, i) => {
+          const username = typeof b === 'string' ? b : b.username;
+          const text = typeof b === 'object' && b.text ? b.text : '';
+          const commentNum = typeof b === 'object' && b.commentNumber ? b.commentNumber : null;
+
+          const card = document.createElement('div');
+          card.className = 'winner-anim glass-card rounded-2xl p-3.5 flex items-center justify-between gap-3 border-accent-cyan/20 hover:border-accent-cyan/50 transition';
+          card.style.animationDelay = (i * 0.04) + 's';
+
+          card.innerHTML = `
+            <div class="flex items-center gap-3 overflow-hidden">
+              <span class="font-bold font-display text-accent-cyan text-sm w-7 text-center shrink-0">
+                B${i + 1}
+              </span>
+              ${createAvatarHtml(username, i + 3)}
+              <div class="overflow-hidden">
+                <div class="font-bold text-slate-100 text-sm flex items-center gap-2">
+                  <span class="truncate">@${escapeHtml(username)}</span>
+                  ${commentNum ? `<span class="px-2 py-0.5 rounded-full bg-accent-cyan/20 text-accent-cyan text-[10px] font-mono shrink-0">Comment #${commentNum} of ${totalFetched}</span>` : ''}
+                  <button title="Copy Username" onclick="copyText('@${escapeHtml(username)}')" class="text-slate-500 hover:text-accent-cyan text-xs transition">📋</button>
+                </div>
+                ${text ? `<p class="text-xs text-slate-400 truncate mt-0.5 max-w-md">"${escapeHtml(text)}"</p>` : ''}
+              </div>
+            </div>
+            <button onclick="promoteBackupToWinner(${i})" title="Promote to Primary Winner" class="shrink-0 px-2.5 py-1 rounded-lg bg-accent-cyan/10 hover:bg-accent-cyan/20 text-accent-cyan text-[11px] font-medium border border-accent-cyan/20 transition">
+              Promote ⬆️
+            </button>
+          `;
+          backupsList.appendChild(card);
+        });
+      }
+
+      renderAllCommentsTable();
+      resultsEl.classList.remove('hidden');
+      resultsEl.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function renderAllCommentsTable(filterQuery = '') {
+      if (!lastData || !lastData.allComments) return;
+      const query = filterQuery.toLowerCase();
+
+      commentsTable.innerHTML = '';
+      const list = lastData.allComments.filter(c => 
+        !query || (c.username || '').toLowerCase().includes(query) || (c.text || '').toLowerCase().includes(query)
+      );
+
+      if (list.length === 0) {
+        commentsTable.innerHTML = `<div class="text-slate-500 text-xs text-center py-4">No comments match search query.</div>`;
+        return;
+      }
+
+      list.forEach((c) => {
+        const row = document.createElement('div');
+        row.className = 'p-2.5 rounded-xl bg-black/30 border border-white/5 flex items-center justify-between gap-3 text-xs';
+        row.innerHTML = `
+          <div class="flex items-center gap-3 overflow-hidden">
+            <span class="font-mono text-slate-500 text-[11px] w-10 shrink-0">#${c.commentNumber}</span>
+            <div class="overflow-hidden">
+              <span class="font-bold text-slate-200">@${escapeHtml(c.username)}</span>
+              ${c.text ? `<span class="text-slate-400 text-[11px] ml-2 truncate">"${escapeHtml(c.text)}"</span>` : ''}
+            </div>
+          </div>
+          <button onclick="copyText('@${escapeHtml(c.username)}')" class="text-slate-500 hover:text-slate-300 text-[11px] shrink-0">Copy 📋</button>
+        `;
+        commentsTable.appendChild(row);
+      });
+    }
+
+    commentsSearch.addEventListener('input', (e) => {
+      renderAllCommentsTable(e.target.value);
+    });
+
+    window.copyText = function(text) {
+      navigator.clipboard.writeText(text);
+      showStatus('Copied: ' + text, 'success', 2000);
+    }
+
+    window.disqualifyWinner = function(index) {
+      if (!lastData || !lastData.winners || !lastData.winners[index]) return;
+      const removed = lastData.winners.splice(index, 1)[0];
+      const removedName = typeof removed === 'string' ? removed : removed.username;
+
+      if (lastData.backups && lastData.backups.length > 0) {
+        const promoted = lastData.backups.shift();
+        lastData.winners.push(promoted);
+        showStatus(`Disqualified @${removedName}. Promoted backup @${typeof promoted === 'string' ? promoted : promoted.username}!`, 'info', 4000);
+      } else {
+        showStatus(`Disqualified @${removedName}. No backups left to promote.`, 'info', 4000);
+      }
+
+      renderResults(lastData);
+    };
+
+    window.promoteBackupToWinner = function(index) {
+      if (!lastData || !lastData.backups || !lastData.backups[index]) return;
+      const promoted = lastData.backups.splice(index, 1)[0];
+      lastData.winners.push(promoted);
+      renderResults(lastData);
+      showStatus(`Promoted @${typeof promoted === 'string' ? promoted : promoted.username} to primary winners!`, 'success', 3000);
+    };
+
+    function showStatus(msg, type = 'error', duration = 0) {
+      statusBox.classList.remove('hidden', 'bg-red-500/10', 'border-red-500/30', 'text-red-300', 'bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-300', 'bg-brand-500/10', 'border-brand-500/30', 'text-brand-300');
+      statusBox.className = 'mt-4 p-4 rounded-xl text-xs sm:text-sm text-center font-medium border ';
+
+      if (type === 'error') {
+        statusBox.classList.add('bg-red-500/10', 'border-red-500/30', 'text-red-300');
+      } else if (type === 'success') {
+        statusBox.classList.add('bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-300');
+      } else {
+        statusBox.classList.add('bg-brand-500/10', 'border-brand-500/30', 'text-brand-300');
+      }
+
+      let contentHtml = msg;
+      if (type === 'error' && (msg.includes('No comments') || msg.includes('login') || msg.includes('Paste Comments'))) {
+        contentHtml += `
+          <div class="mt-3 flex justify-center gap-2">
+            <button onclick="document.getElementById('igLoginModal').classList.remove('hidden')" class="px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-semibold text-xs shadow-lg transition flex items-center gap-2">
+              <span>🔐</span> Log in to Instagram
+            </button>
+            <button onclick="setMode('paste')" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs shadow-lg transition flex items-center gap-2">
+              <span>📝</span> Switch to Paste Mode
+            </button>
+          </div>
+        `;
+      }
+
+      statusBox.innerHTML = contentHtml;
+
+      if (duration > 0) {
+        setTimeout(() => {
+          statusBox.classList.add('hidden');
+        }, duration);
+      }
+    }
+
+    async function runDraw() {
+      statusBox.classList.add('hidden');
+      
+      const payload = getCommonPayload();
+      let endpoint = '';
+      let bodyData = {};
+
+      if (currentMode === 'url') {
+        const postUrl = document.getElementById('postUrl').value.trim();
+        if (!postUrl) {
+          showStatus('Please enter a valid post URL.', 'error');
+          return;
+        }
+        endpoint = '/api/fetch-and-pick';
+        bodyData = { postUrl, ...payload };
+      } else {
+        const text = rawText.value.trim();
+        if (!text) {
+          showStatus('Please paste comments or click "Load Sample Giveaway Comments".', 'error');
+          return;
+        }
+        endpoint = '/api/pick-from-text';
+        bodyData = { rawText: text, ...payload };
+      }
+
+      runBtn.disabled = true;
+      spinner.classList.remove('hidden');
+      runBtnText.textContent = currentMode === 'url' ? 'Deep Scraping Comments…' : 'Running Fisher–Yates Draw…';
+
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyData),
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+          showStatus(data.error || 'Failed to complete draw.', 'error');
+          return;
+        }
+
+        shuffleOverlay.classList.remove('hidden');
+        const sampleNames = (data.winners || []).concat(data.backups || []).map(w => typeof w === 'string' ? w : w.username);
+        let ticks = 0;
+        const interval = setInterval(() => {
+          ticks++;
+          soundEngine.playTick();
+          if (sampleNames.length > 0) {
+            shuffleName.textContent = '@' + sampleNames[Math.floor(Math.random() * sampleNames.length)];
+          }
+          if (ticks > 14) {
+            clearInterval(interval);
+            shuffleOverlay.classList.add('hidden');
+            renderResults(data);
+            soundEngine.playFanfare();
+            fireConfetti();
+          }
+        }, 110);
+
+      } catch (err) {
+        showStatus('Network or Server Error: ' + err.message, 'error');
+      } finally {
+        runBtn.disabled = false;
+        spinner.classList.add('hidden');
+        runBtnText.textContent = currentMode === 'url' ? 'Fetch Post & Launch Draw' : 'Launch Draw on Pasted Comments';
+      }
+    }
+
+    runBtn.addEventListener('click', runDraw);
+
+    document.getElementById('redrawBtn').addEventListener('click', () => {
+      runDraw();
+    });
+
+    document.getElementById('toggleAuditBtn').addEventListener('click', () => {
+      auditPanel.classList.toggle('hidden');
+    });
+
+    document.getElementById('toggleAllCommentsBtn').addEventListener('click', () => {
+      allCommentsPanel.classList.toggle('hidden');
+    });
+
+    function triggerDownload(filename, content, mime) {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('downloadTxt').addEventListener('click', () => {
+      if (!lastData) return;
+      let text = `=======================================\n`;
+      text += `GIVEAWAY WINNERS REPORT (Fisher-Yates Draw)\n`;
+      text += `Timestamp: ${lastData.audit ? lastData.audit.timestamp : new Date().toISOString()}\n`;
+      text += `Total Scraped: ${lastData.totalFetched} | Unique Users: ${lastData.uniqueUsersCount || lastData.eligibleCount} | Eligible Pool: ${lastData.eligibleCount}\n`;
+      text += `=======================================\n\n`;
+
+      text += `PRIMARY WINNERS (${(lastData.winners || []).length}):\n`;
+      (lastData.winners || []).forEach((w, i) => {
+        const u = typeof w === 'string' ? w : w.username;
+        const num = typeof w === 'object' && w.commentNumber ? ` (Comment #${w.commentNumber})` : '';
+        const c = typeof w === 'object' && w.text ? ` - "${w.text}"` : '';
+        text += `${i + 1}. @${u}${num}${c}\n`;
+      });
+
+      text += `\nBACKUP WINNERS (${(lastData.backups || []).length}):\n`;
+      (lastData.backups || []).forEach((b, i) => {
+        const u = typeof b === 'string' ? b : b.username;
+        const num = typeof b === 'object' && b.commentNumber ? ` (Comment #${b.commentNumber})` : '';
+        const c = typeof b === 'object' && b.text ? ` - "${b.text}"` : '';
+        text += `${i + 1}. @${u}${num}${c}\n`;
+      });
+
+      triggerDownload('giveaway_winners.txt', text, 'text/plain');
+    });
+
+    document.getElementById('downloadCsv').addEventListener('click', () => {
+      if (!lastData) return;
+      let rows = [['Rank', 'Type', 'Comment Number', 'Username', 'Comment Text']];
+      (lastData.winners || []).forEach((w, i) => {
+        const u = typeof w === 'string' ? w : w.username;
+        const num = typeof w === 'object' && w.commentNumber ? w.commentNumber : '';
+        const c = typeof w === 'object' && w.text ? w.text : '';
+        rows.push([i + 1, 'Winner', `#${num}`, '@' + u, c]);
+      });
+      (lastData.backups || []).forEach((b, i) => {
+        const u = typeof b === 'string' ? b : b.username;
+        const num = typeof b === 'object' && b.commentNumber ? b.commentNumber : '';
+        const c = typeof b === 'object' && b.text ? b.text : '';
+        rows.push([i + 1, 'Backup', `#${num}`, '@' + u, c]);
+      });
+
+      const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+      triggerDownload('giveaway_winners.csv', csv, 'text/csv');
+    });
+
+    document.getElementById('copyWinnersBtn').addEventListener('click', () => {
+      if (!lastData || !lastData.winners) return;
+      const list = lastData.winners.map((w, i) => `${i + 1}. @${typeof w === 'string' ? w : w.username}`).join('\n');
+      navigator.clipboard.writeText(list);
+      showStatus('Primary winners copied to clipboard!', 'success', 3000);
+    });
+
+    // PAGE 2: CSV EXPORTER
+    const runCsvExportBtn = document.getElementById('runCsvExportBtn');
+    const csvBtnText = document.getElementById('csvBtnText');
+    const csvBtnIcon = document.getElementById('csvBtnIcon');
+    const csvSpinner = document.getElementById('csvSpinner');
+    const csvStatusBox = document.getElementById('csvStatusBox');
+    const csvResults = document.getElementById('csvResults');
+    const csvDatasetTable = document.getElementById('csvDatasetTable');
+    const csvSearchInput = document.getElementById('csvSearchInput');
+
+    function showCsvStatus(msg, type = 'error') {
+      csvStatusBox.classList.remove('hidden', 'bg-red-500/10', 'border-red-500/30', 'text-red-300', 'bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-300');
+      csvStatusBox.className = 'p-4 rounded-xl text-xs sm:text-sm text-center font-medium border ';
+      if (type === 'error') csvStatusBox.classList.add('bg-red-500/10', 'border-red-500/30', 'text-red-300');
+      else csvStatusBox.classList.add('bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-300');
+      csvStatusBox.innerHTML = msg;
+    }
+
+    async function runCsvExporter() {
+      let bodyData = {};
+
+      if (currentCsvMode === 'url') {
+        const postUrl = document.getElementById('csvPostUrl').value.trim();
+        const scrapeDepth = document.getElementById('csvScrapeDepth').value;
+        const sessionId = document.getElementById('csvSessionId').value.trim();
+
+        if (!postUrl) {
+          showCsvStatus('Please enter a valid post URL.', 'error');
+          return;
+        }
+        bodyData = { postUrl, scrapeDepth, sessionId };
+      } else {
+        const rawText = document.getElementById('csvRawText').value.trim();
+        if (!rawText) {
+          showCsvStatus('Please paste raw comments text into the box first.', 'error');
+          return;
+        }
+        bodyData = { rawText };
+      }
+
+      csvStatusBox.classList.add('hidden');
+      csvResults.classList.add('hidden');
+      runCsvExportBtn.disabled = true;
+      csvSpinner.classList.remove('hidden');
+      csvBtnText.textContent = currentCsvMode === 'url' ? 'Scraping All Post Comments…' : 'Generating CSV File…';
+
+      try {
+        const res = await fetch('/api/fetch-all-comments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyData),
+        });
+
+        const data = await res.json();
+        if (!data.success) {
+          showCsvStatus(data.error || 'Failed to export comments.', 'error');
+          return;
+        }
+
+        lastExportData = data;
+        renderExportResults(data);
+      } catch (err) {
+        showCsvStatus('Network or Server Error: ' + err.message, 'error');
+      } finally {
+        runCsvExportBtn.disabled = false;
+        csvSpinner.classList.add('hidden');
+        csvBtnText.textContent = currentCsvMode === 'url' ? 'Scrape & Export All Comments to CSV' : 'Generate & Download CSV File';
+      }
+    }
+
+    runCsvExportBtn.addEventListener('click', runCsvExporter);
+
+    function renderExportResults(data) {
+      document.getElementById('csvTotalCount').textContent = data.totalComments || (data.comments || []).length;
+      document.getElementById('csvPostSubtitle').textContent = `Extracted from ${data.postUrl || data.platform}`;
+
+      renderCsvDatasetTable();
+      csvResults.classList.remove('hidden');
+      csvResults.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function renderCsvDatasetTable(filterQuery = '') {
+      if (!lastExportData || !lastExportData.comments) return;
+      const query = filterQuery.toLowerCase();
+
+      csvDatasetTable.innerHTML = '';
+      const list = lastExportData.comments.filter(c => 
+        !query || (c.username || '').toLowerCase().includes(query) || (c.text || '').toLowerCase().includes(query)
+      );
+
+      if (list.length === 0) {
+        csvDatasetTable.innerHTML = `<div class="text-slate-500 text-xs text-center py-4">No comments match search query.</div>`;
+        return;
+      }
+
+      list.forEach((c) => {
+        const row = document.createElement('div');
+        row.className = 'p-3 rounded-xl bg-black/30 border border-white/5 flex flex-wrap items-center justify-between gap-3 text-xs';
+        row.innerHTML = `
+          <div class="flex items-center gap-3 overflow-hidden">
+            <span class="font-mono text-accent-cyan font-bold w-12 text-right shrink-0">#${c.commentNumber}</span>
+            <div class="overflow-hidden">
+              <span class="font-bold text-slate-200">@${escapeHtml(c.username)}</span>
+              ${c.text ? `<p class="text-slate-400 text-xs mt-0.5 truncate max-w-xl">"${escapeHtml(c.text)}"</p>` : ''}
+            </div>
+          </div>
+          <div class="flex items-center gap-3 shrink-0 text-slate-400 text-[11px]">
+            <span>Tags: <strong class="text-brand-400 font-mono">${c.mentionsCount || 0}</strong></span>
+            <button onclick="copyText('@${escapeHtml(c.username)}')" class="text-slate-500 hover:text-slate-300">Copy 📋</button>
+          </div>
+        `;
+        csvDatasetTable.appendChild(row);
+      });
+    }
+
+    if (csvSearchInput) {
+      csvSearchInput.addEventListener('input', (e) => {
+        renderCsvDatasetTable(e.target.value);
+      });
+    }
+
+    document.getElementById('downloadFullCsvBtn').addEventListener('click', () => {
+      if (!lastExportData || !lastExportData.csvContent) return;
+      triggerDownload('all_comments_export.csv', lastExportData.csvContent, 'text/csv');
+    });
+
+    document.getElementById('downloadFullTxtBtn').addEventListener('click', () => {
+      if (!lastExportData || !lastExportData.comments) return;
+      let text = `FULL COMMENTS EXPORT (${lastExportData.totalComments} comments)\n\n`;
+      lastExportData.comments.forEach(c => {
+        text += `#${c.commentNumber}. @${c.username}${c.text ? ` - "${c.text}"` : ''}\n`;
+      });
+      triggerDownload('all_comments_export.txt', text, 'text/plain');
+    });
+
+    document.getElementById('copyAllCsvUsernamesBtn').addEventListener('click', () => {
+      if (!lastExportData || !lastExportData.comments) return;
+      const list = lastExportData.comments.map(c => `@${c.username}`).join('\n');
+      navigator.clipboard.writeText(list);
+      alert(`Copied ${lastExportData.comments.length} usernames to clipboard!`);
+    });
+
+  </script>
+</body>
+</html>

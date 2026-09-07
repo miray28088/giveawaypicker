@@ -1,0 +1,14 @@
+{
+  "name": "giveaway-winner-picker",
+  "version": "1.0.0",
+  "description": "Fetch comments from a public social post (or paste them manually) and draw fair, random giveaway winners.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "playwright": "^1.47.0"
+  }
+}
