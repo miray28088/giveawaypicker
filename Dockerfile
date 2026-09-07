@@ -7,8 +7,11 @@ WORKDIR /app
 # Copy dependency manifests
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install exact npm dependencies
+RUN npm ci || npm install
+
+# Guarantee exact Chromium browser binary is downloaded and installed
+RUN npx playwright install chromium
 
 # Copy application source code
 COPY . .
